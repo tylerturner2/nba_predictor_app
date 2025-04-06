@@ -28,9 +28,11 @@ def get_recent_game_stats():
         if response.status_code == 200:
             day_stats = response.json()
             for entry in day_stats:
-                entry["Date"] = d  # add the date manually to each stat entry
+                entry["GameDate"] = d  # safely store the date field
             all_stats.extend(day_stats)
-    return pd.DataFrame(all_stats)
+    df = pd.DataFrame(all_stats)
+    df.rename(columns={"GameDate": "Date"}, inplace=True)
+    return df
 
 # Predictive formula using SL5, H2H5, LS with weights and minutes factored in
 
