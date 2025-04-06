@@ -132,25 +132,30 @@ with st.spinner("📊 Fetching and calculating predictions..."):
 if not stats_df.empty:
     df_predictions = run_predictive_formula(stats_df, selected_teams)
 
-    team1, team2 = selected_teams
-    col1, col2 = st.columns(2)
+    if 'Team' in df_predictions.columns and not df_predictions.empty:
+        team1, team2 = selected_teams
+        col1, col2 = st.columns(2)
 
-    with col1:
-        st.image(TEAM_LOGOS.get(team1, ""), width=100)
-        st.markdown(f"### {team1} Player Predictions")
-        st.dataframe(df_predictions[df_predictions['Team'] == team1].reset_index(drop=True))
+        with col1:
+            st.image(TEAM_LOGOS.get(team1, ""), width=100)
+            st.markdown(f"### {team1} Player Predictions")
+            df_team1 = df_predictions[df_predictions['Team'] == team1].reset_index(drop=True)
+            st.dataframe(df_team1)
 
-    with col2:
-        st.image(TEAM_LOGOS.get(team2, ""), width=100)
-        st.markdown(f"### {team2} Player Predictions")
-        st.dataframe(df_predictions[df_predictions['Team'] == team2].reset_index(drop=True))
+        with col2:
+            st.image(TEAM_LOGOS.get(team2, ""), width=100)
+            st.markdown(f"### {team2} Player Predictions")
+            df_team2 = df_predictions[df_predictions['Team'] == team2].reset_index(drop=True)
+            st.dataframe(df_team2)
 
-    excel_data = create_excel_download(df_predictions)
-    st.download_button(
-        label="📥 Download Excel Predictions",
-        data=excel_data,
-        file_name="nba_predictions.xlsx",
-        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-    )
+        excel_data = create_excel_download(df_predictions)
+        st.download_button(
+            label="📥 Download Excel Predictions",
+            data=excel_data,
+            file_name="nba_predictions.xlsx",
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        )
+    else:
+        st.warning("No predictions available for this matchup.")
 else:
     st.warning("No stats found for this matchup.")
