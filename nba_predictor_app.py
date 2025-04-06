@@ -48,14 +48,13 @@ def run_predictive_formula(stats_df, selected_team):
             continue
 
         team = pstats.iloc[0]['Team']
-        opps = pstats['Opponent'].unique()
 
         # SL5: Last 5 games
         sl5 = pstats.head(5)
-        sl5_pts = sl5['Points'].mean()
-        sl5_reb = sl5['Rebounds'].mean()
-        sl5_ast = sl5['Assists'].mean()
         sl5_min = sl5['Minutes'].mean()
+        sl5_pts = (sl5['Points'] * sl5['Minutes']).sum() / sl5['Minutes'].sum() if sl5['Minutes'].sum() else 0
+        sl5_reb = (sl5['Rebounds'] * sl5['Minutes']).sum() / sl5['Minutes'].sum() if sl5['Minutes'].sum() else 0
+        sl5_ast = (sl5['Assists'] * sl5['Minutes']).sum() / sl5['Minutes'].sum() if sl5['Minutes'].sum() else 0
 
         # H2H5: Head-to-head vs selected team
         h2h = pstats[pstats['Opponent'] == selected_team].head(5)
@@ -99,9 +98,11 @@ st.subheader("Today's Game Predictions")
 with st.spinner('Loading today\'s games...'):
     games = get_today_games()
 
-game_options = {f"{g['AwayTeam']} @ {g['HomeTeam']} ({g['DateTime'][:10]})": g['HomeTeam'] for g in games}
-selected_game = st.selectbox("Select a game:", list(game_options.keys()))
-selected_team = game_options[selected_game]
+# Display only today's games in dropdown with cleaner keys
+game_labels = [f"{g['AwayTeam']} @ {g['HomeTeam']}" for g in games]
+game_lookup = {f"{g['AwayTeam']} @ {g['HomeTeam']}": g['HomeTeam'] for g in games}
+selected_game = st.selectbox("Select a game:", game_labels)
+selected_team = game_lookup[selected_game]
 
 with st.spinner('Fetching and analyzing recent player stats...'):
     stats_df = get_recent_game_stats()
