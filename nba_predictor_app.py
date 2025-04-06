@@ -39,7 +39,7 @@ def run_predictive_formula(stats_df, selected_teams):
     predictions = []
 
     team1, team2 = selected_teams
-    filtered_df = stats_df[(stats_df['Team'].isin([team1, team2])) | (stats_df['Opponent'].isin([team1, team2]))]
+    filtered_df = stats_df[(stats_df['Team'].isin([team1, team2])) & (stats_df['Opponent'].isin([team1, team2]))]
     game_players = filtered_df['Name'].unique()
 
     for player in game_players:
@@ -117,7 +117,7 @@ with st.spinner("📊 Fetching and calculating predictions..."):
 if not stats_df.empty:
     df_predictions = run_predictive_formula(stats_df, selected_teams)
     st.markdown("### 🎯 Player Predictions vs Props")
-    st.dataframe(df_predictions.style.background_gradient(cmap='Blues', axis=0))
+    st.dataframe(df_predictions)
 
     excel_data = create_excel_download(df_predictions)
     st.download_button(
