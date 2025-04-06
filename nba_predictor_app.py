@@ -134,18 +134,23 @@ if not stats_df.empty:
 
     if 'Team' in df_predictions.columns and not df_predictions.empty:
         team1, team2 = selected_teams
+        df_team1 = df_predictions[df_predictions['Team'] == team1].reset_index(drop=True)
+        df_team2 = df_predictions[df_predictions['Team'] == team2].reset_index(drop=True)
+
         col1, col2 = st.columns(2)
 
         with col1:
-            st.image(TEAM_LOGOS.get(team1, ""), width=100)
+            logo1 = TEAM_LOGOS.get(team1)
+            if logo1:
+                st.image(logo1, width=100)
             st.markdown(f"### {team1} Player Predictions")
-            df_team1 = df_predictions[df_predictions['Team'] == team1].reset_index(drop=True)
             st.dataframe(df_team1)
 
         with col2:
-            st.image(TEAM_LOGOS.get(team2, ""), width=100)
+            logo2 = TEAM_LOGOS.get(team2)
+            if logo2:
+                st.image(logo2, width=100)
             st.markdown(f"### {team2} Player Predictions")
-            df_team2 = df_predictions[df_predictions['Team'] == team2].reset_index(drop=True)
             st.dataframe(df_team2)
 
         excel_data = create_excel_download(df_predictions)
