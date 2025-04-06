@@ -36,14 +36,16 @@ def get_recent_game_stats():
 
 # Predictive formula using SL5, H2H5, LS with weights and minutes factored in
 
-def run_predictive_formula(stats_df, selected_team):
+def run_predictive_formula(stats_df, selected_teams):
     predictions = []
 
-    # Identify players in today's game
-    game_players = stats_df[(stats_df['Team'] == selected_team) | (stats_df['Opponent'] == selected_team)]['Name'].unique()
+    # Filter players from both teams in selected matchup
+    team1, team2 = selected_teams
+    filtered_df = stats_df[(stats_df['Team'].isin([team1, team2])) | (stats_df['Opponent'].isin([team1, team2]))]
+    game_players = filtered_df['Name'].unique()
 
     for player in game_players:
-        pstats = stats_df[stats_df['Name'] == player].sort_values(by='Date', ascending=False).head(10)
+        pstats = filtered_df[filtered_df['Name'] == player].sort_values(by='Date', ascending=False).head(10)
         if pstats.empty:
             continue
 
@@ -56,14 +58,15 @@ def run_predictive_formula(stats_df, selected_team):
         sl5_reb = (sl5['Rebounds'] * sl5['Minutes']).sum() / sl5['Minutes'].sum() if sl5['Minutes'].sum() else 0
         sl5_ast = (sl5['Assists'] * sl5['Minutes']).sum() / sl5['Minutes'].sum() if sl5['Minutes'].sum() else 0
 
-        # H2H5: Head-to-head vs selected team
-        h2h = pstats[pstats['Opponent'] == selected_team].head(5)
+        # H2H5: Head-to-head vs the other team
+        opponent_team = team2 if team == team1 else team1
+        h2h = pstats[pstats['Opponent'] == opponent_team].head(5)
         h2h_pts = h2h['Points'].mean() if not h2h.empty else 0
         h2h_reb = h2h['Rebounds'].mean() if not h2h.empty else 0
         h2h_ast = h2h['Assists'].mean() if not h2h.empty else 0
 
         # LS: Location-specific
-        loc_type = 'Home' if team == selected_team else 'Away'
+        loc_type = 'Home' if team == team1 else 'Away'
         loc_games = pstats[pstats['HomeOrAway'] == loc_type]
         ls_pts = loc_games['Points'].mean() if not loc_games.empty else 0
         ls_reb = loc_games['Rebounds'].mean() if not loc_games.empty else 0
@@ -98,20 +101,18 @@ st.subheader("Today's Game Predictions")
 with st.spinner('Loading today\'s games...'):
     games = get_today_games()
 
-# Display only today's games in dropdown with cleaner keys
-game_labels = [f"{g['AwayTeam']} @ {g['HomeTeam']}" for g in games]
-game_lookup = {f"{g['AwayTeam']} @ {g['HomeTeam']}": g['HomeTeam'] for g in games}
+# Include dates in dropdown and preserve matchup structure
+game_labels = [f"{g['AwayTeam']} @ {g['HomeTeam']} ({g['DateTime'][:10]})" for g in games]
+game_lookup = {f"{g['AwayTeam']} @ {g['HomeTeam']} ({g['DateTime'][:10]})": (g['AwayTeam'], g['HomeTeam']) for g in games}
 selected_game = st.selectbox("Select a game:", game_labels)
-selected_team = game_lookup[selected_game]
+selected_teams = game_lookup[selected_game]
 
 with st.spinner('Fetching and analyzing recent player stats...'):
     stats_df = get_recent_game_stats()
 
-# Filter to relevant players in today’s game
-players_today = stats_df[(stats_df['Team'] == selected_team) | (stats_df['Opponent'] == selected_team)]
-
-if not players_today.empty:
-    df_predictions = run_predictive_formula(stats_df, selected_team)
+# Run predictions on filtered players
+if not stats_df.empty:
+    df_predictions = run_predictive_formula(stats_df, selected_teams)
     st.dataframe(df_predictions)
 
     excel_data = create_excel_download(df_predictions)
