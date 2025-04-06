@@ -26,7 +26,10 @@ def get_recent_game_stats():
         url = f"{BASE_URL}/PlayerGameStatsByDate/{d}"
         response = requests.get(url, headers=HEADERS)
         if response.status_code == 200:
-            all_stats.extend(response.json())
+            day_stats = response.json()
+            for entry in day_stats:
+                entry["Date"] = d  # add the date manually to each stat entry
+            all_stats.extend(day_stats)
     return pd.DataFrame(all_stats)
 
 # Predictive formula using SL5, H2H5, LS with weights and minutes factored in
