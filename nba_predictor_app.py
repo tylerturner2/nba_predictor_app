@@ -11,7 +11,7 @@ HEADERS = {"Ocp-Apim-Subscription-Key": API_KEY}
 
 # Utilities to get recent dates
 TODAY = date.today()
-DATE_RANGE = [(TODAY - timedelta(days=i)).isoformat() for i in range(1, 15)]  # last 2 weeks
+DATE_RANGE = [(TODAY - timedelta(days=i)).isoformat() for i in range(1, 22)]  # last 3 weeks
 
 # Get today's games
 def get_today_games():
@@ -30,12 +30,15 @@ def get_recent_game_stats():
     return pd.DataFrame(all_stats)
 
 # Predictive formula using SL5, H2H5, LS with weights and minutes factored in
+
 def run_predictive_formula(stats_df, selected_team):
     predictions = []
-    players = stats_df['Name'].unique()
 
-    for player in players:
-        pstats = stats_df[stats_df['Name'] == player]
+    # Identify players in today's game
+    game_players = stats_df[(stats_df['Team'] == selected_team) | (stats_df['Opponent'] == selected_team)]['Name'].unique()
+
+    for player in game_players:
+        pstats = stats_df[stats_df['Name'] == player].sort_values(by='Date', ascending=False).head(10)
         if pstats.empty:
             continue
 
@@ -43,14 +46,14 @@ def run_predictive_formula(stats_df, selected_team):
         opps = pstats['Opponent'].unique()
 
         # SL5: Last 5 games
-        sl5 = pstats.sort_values(by='Date', ascending=False).head(5)
+        sl5 = pstats.head(5)
         sl5_pts = sl5['Points'].mean()
         sl5_reb = sl5['Rebounds'].mean()
         sl5_ast = sl5['Assists'].mean()
         sl5_min = sl5['Minutes'].mean()
 
         # H2H5: Head-to-head vs selected team
-        h2h = pstats[pstats['Opponent'] == selected_team].sort_values(by='Date', ascending=False).head(5)
+        h2h = pstats[pstats['Opponent'] == selected_team].head(5)
         h2h_pts = h2h['Points'].mean() if not h2h.empty else 0
         h2h_reb = h2h['Rebounds'].mean() if not h2h.empty else 0
         h2h_ast = h2h['Assists'].mean() if not h2h.empty else 0
@@ -102,7 +105,7 @@ with st.spinner('Fetching and analyzing recent player stats...'):
 players_today = stats_df[(stats_df['Team'] == selected_team) | (stats_df['Opponent'] == selected_team)]
 
 if not players_today.empty:
-    df_predictions = run_predictive_formula(players_today, selected_team)
+    df_predictions = run_predictive_formula(stats_df, selected_team)
     st.dataframe(df_predictions)
 
     excel_data = create_excel_download(df_predictions)
