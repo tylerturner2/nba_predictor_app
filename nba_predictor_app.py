@@ -8,18 +8,47 @@ from io import BytesIO
 API_KEY = st.secrets["sportsdata_api_key"]
 BASE_URL = "https://api.sportsdata.io/v3/nba/stats/json"
 HEADERS = {"Ocp-Apim-Subscription-Key": API_KEY}
+TEAM_LOGOS = {
+    "ATL": "https://loodibee.com/wp-content/uploads/nba-atlanta-hawks-logo.png",
+    "BOS": "https://loodibee.com/wp-content/uploads/nba-boston-celtics-logo.png",
+    "BRK": "https://loodibee.com/wp-content/uploads/nba-brooklyn-nets-logo.png",
+    "CHA": "https://loodibee.com/wp-content/uploads/nba-charlotte-hornets-logo.png",
+    "CHI": "https://loodibee.com/wp-content/uploads/nba-chicago-bulls-logo.png",
+    "CLE": "https://loodibee.com/wp-content/uploads/nba-cleveland-cavaliers-logo.png",
+    "DAL": "https://loodibee.com/wp-content/uploads/nba-dallas-mavericks-logo.png",
+    "DEN": "https://loodibee.com/wp-content/uploads/nba-denver-nuggets-logo.png",
+    "DET": "https://loodibee.com/wp-content/uploads/nba-detroit-pistons-logo.png",
+    "GSW": "https://loodibee.com/wp-content/uploads/nba-golden-state-warriors-logo.png",
+    "HOU": "https://loodibee.com/wp-content/uploads/nba-houston-rockets-logo.png",
+    "IND": "https://loodibee.com/wp-content/uploads/nba-indiana-pacers-logo.png",
+    "LAC": "https://loodibee.com/wp-content/uploads/nba-la-clippers-logo.png",
+    "LAL": "https://loodibee.com/wp-content/uploads/nba-la-lakers-logo.png",
+    "MEM": "https://loodibee.com/wp-content/uploads/nba-memphis-grizzlies-logo.png",
+    "MIA": "https://loodibee.com/wp-content/uploads/nba-miami-heat-logo.png",
+    "MIL": "https://loodibee.com/wp-content/uploads/nba-milwaukee-bucks-logo.png",
+    "MIN": "https://loodibee.com/wp-content/uploads/nba-minnesota-timberwolves-logo.png",
+    "NOP": "https://loodibee.com/wp-content/uploads/nba-new-orleans-pelicans-logo.png",
+    "NYK": "https://loodibee.com/wp-content/uploads/nba-new-york-knicks-logo.png",
+    "OKC": "https://loodibee.com/wp-content/uploads/nba-oklahoma-city-thunder-logo.png",
+    "ORL": "https://loodibee.com/wp-content/uploads/nba-orlando-magic-logo.png",
+    "PHI": "https://loodibee.com/wp-content/uploads/nba-philadelphia-76ers-logo.png",
+    "PHX": "https://loodibee.com/wp-content/uploads/nba-phoenix-suns-logo.png",
+    "POR": "https://loodibee.com/wp-content/uploads/nba-portland-trail-blazers-logo.png",
+    "SAC": "https://loodibee.com/wp-content/uploads/nba-sacramento-kings-logo.png",
+    "SAS": "https://loodibee.com/wp-content/uploads/nba-san-antonio-spurs-logo.png",
+    "TOR": "https://loodibee.com/wp-content/uploads/nba-toronto-raptors-logo.png",
+    "UTA": "https://loodibee.com/wp-content/uploads/nba-utah-jazz-logo.png",
+    "WAS": "https://loodibee.com/wp-content/uploads/nba-washington-wizards-logo.png"
+}
 
-# Utilities to get recent dates
 TODAY = date.today()
-DATE_RANGE = [(TODAY - timedelta(days=i)).isoformat() for i in range(1, 22)]  # last 3 weeks
+DATE_RANGE = [(TODAY - timedelta(days=i)).isoformat() for i in range(1, 22)]
 
-# Get today's games
 def get_today_games():
     games_url = f"https://api.sportsdata.io/v3/nba/scores/json/GamesByDate/{TODAY.isoformat()}"
     response = requests.get(games_url, headers=HEADERS)
     return response.json() if response.status_code == 200 else []
 
-# Get player stats over last X days
 def get_recent_game_stats():
     all_stats = []
     for d in DATE_RANGE:
@@ -28,16 +57,14 @@ def get_recent_game_stats():
         if response.status_code == 200:
             day_stats = response.json()
             for entry in day_stats:
-                entry["GameDate"] = d  # safely store the date field
+                entry["GameDate"] = d
             all_stats.extend(day_stats)
     df = pd.DataFrame(all_stats)
     df.rename(columns={"GameDate": "Date"}, inplace=True)
     return df
 
-# Predictive formula using SL5, H2H5, LS with weights and minutes factored in
 def run_predictive_formula(stats_df, selected_teams):
     predictions = []
-
     team1, team2 = selected_teams
     filtered_df = stats_df[(stats_df['Team'].isin([team1, team2])) & (stats_df['Opponent'].isin([team1, team2]))]
     game_players = filtered_df['Name'].unique()
@@ -48,7 +75,6 @@ def run_predictive_formula(stats_df, selected_teams):
             continue
 
         team = pstats.iloc[0]['Team']
-
         sl5 = pstats.head(5)
         sl5_min = sl5['Minutes'].mean()
         sl5_pts = (sl5['Points'] * sl5['Minutes']).sum() / sl5['Minutes'].sum() if sl5['Minutes'].sum() else 0
@@ -90,18 +116,7 @@ def create_excel_download(df):
 
 # Streamlit App
 st.set_page_config(page_title="NBA Prop Predictor", layout="wide")
-st.markdown("""
-    <style>
-    .main { background-color: #f4f4f4; }
-    .block-container { padding-top: 2rem; }
-    h1, h2 { color: #003366; }
-    .stButton>button { background-color: #0066cc; color: white; border-radius: 10px; }
-    .css-1v0mbdj { border-radius: 10px; }
-    </style>
-""", unsafe_allow_html=True)
-
 st.title("🏀 NBA Predictive Formula Tool")
-st.markdown("**Powered by DraftKings & BettingPros**")
 
 with st.spinner("📅 Loading today's games..."):
     games = get_today_games()
@@ -116,8 +131,19 @@ with st.spinner("📊 Fetching and calculating predictions..."):
 
 if not stats_df.empty:
     df_predictions = run_predictive_formula(stats_df, selected_teams)
-    st.markdown("### 🎯 Player Predictions vs Props")
-    st.dataframe(df_predictions)
+
+    team1, team2 = selected_teams
+    col1, col2 = st.columns(2)
+
+    with col1:
+        st.image(TEAM_LOGOS.get(team1, ""), width=100)
+        st.markdown(f"### {team1} Player Predictions")
+        st.dataframe(df_predictions[df_predictions['Team'] == team1].reset_index(drop=True))
+
+    with col2:
+        st.image(TEAM_LOGOS.get(team2, ""), width=100)
+        st.markdown(f"### {team2} Player Predictions")
+        st.dataframe(df_predictions[df_predictions['Team'] == team2].reset_index(drop=True))
 
     excel_data = create_excel_download(df_predictions)
     st.download_button(
